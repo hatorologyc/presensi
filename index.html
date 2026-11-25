@@ -115,6 +115,8 @@
         <li class="nav-item"><a class="nav-link" id="nav-scan" onclick="switchMenu('scan')"><i class="bi bi-credit-card-2-front"></i> Scan Kartu RFID</a></li>
         <li class="nav-item"><a class="nav-link" id="nav-absensi" onclick="switchMenu('absensi')"><i class="bi bi-check2-square"></i> Input Absensi</a></li>
         <li class="nav-item"><a class="nav-link" id="nav-siswa" onclick="switchMenu('siswa')"><i class="bi bi-people"></i> Data Siswa</a></li>
+        <li class="nav-item"><a class="nav-link" id="nav-kelas" onclick="switchMenu('kelas')"><i class="bi bi-building"></i> Master Kelas</a></li>
+        <li class="nav-item"><a class="nav-link" id="nav-jadwal" onclick="switchMenu('jadwal')"><i class="bi bi-calendar-week"></i> Jadwal Absen</a></li>
         <li class="nav-item"><a class="nav-link" id="nav-rekap" onclick="switchMenu('rekap')"><i class="bi bi-file-earmark-spreadsheet"></i> Rekap & Export</a></li>
         <li class="nav-item"><a class="nav-link" id="nav-gantipass" onclick="switchMenu('gantipass')"><i class="bi bi-key"></i> Ganti Password</a></li>
       </ul>
@@ -210,6 +212,8 @@
           </div>
         </div>
 
+        <div id="scan-jadwal-info" class="alert alert-secondary py-2 small mb-3"></div>
+
         <div class="card border-0 shadow-sm p-4 mb-3">
           <label class="form-label fw-semibold" for="scan-input"><i class="bi bi-credit-card-2-front me-1"></i> Tempelkan kartu pada reader</label>
           <input type="text" id="scan-input" class="form-control form-control-lg" placeholder="Menunggu scan kartu..." autocomplete="off" autocapitalize="off" spellcheck="false">
@@ -261,6 +265,7 @@
               <button class="btn btn-primary" onclick="submitAbsensi()"><i class="bi bi-save me-1"></i> Simpan Absensi</button>
             </div>
           </div>
+          <div id="abs-jadwal-info" class="alert py-2 small d-none"></div>
           <div class="alert alert-info py-2 small">
             Siswa yang <b>belum scan</b> otomatis berstatus <b>Alpa</b>. Jika nanti mereka scan kartu, status berubah menjadi Hadir.
           </div>
@@ -270,7 +275,7 @@
                 <tr>
                   <th width="50">No.</th><th>NIS</th><th>Nama Siswa</th>
                   <th class="text-center" width="80">L/P</th>
-                  <th class="text-center" width="110">Jam Scan</th>
+                  <th class="text-center" width="170">Jam Scan</th>
                   <th class="text-center">Status Kehadiran</th>
                 </tr>
               </thead>
@@ -314,6 +319,96 @@
                 </tr>
               </thead>
               <tbody id="siswa-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- MASTER KELAS -->
+      <div id="view-kelas" class="menu-section d-none">
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+          <h3 class="fw-bold mb-0">Master Kelas</h3>
+          <button class="btn btn-primary" onclick="openModalKelas()"><i class="bi bi-plus-lg me-1"></i> Tambah Kelas</button>
+        </div>
+        <div class="card border-0 shadow-sm p-4">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th width="50">No.</th><th>Kelas</th><th>Wali Kelas</th><th>Keterangan</th>
+                  <th class="text-center">Jumlah Siswa</th><th width="120" class="text-center">Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="kelas-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- JADWAL ABSEN -->
+      <div id="view-jadwal" class="menu-section d-none">
+        <h3 class="fw-bold mb-4">Jadwal Absen</h3>
+
+        <div class="card border-0 shadow-sm p-4 mb-4">
+          <div class="form-check form-switch fs-5">
+            <input class="form-check-input" type="checkbox" role="switch" id="jadwal-enabled" onchange="toggleJadwalEnabled(this)">
+            <label class="form-check-label fw-semibold" for="jadwal-enabled">Terapkan jadwal pada scan kartu RFID</label>
+          </div>
+          <div class="form-text">Jika aktif, scan hanya diterima pada hari dan jam yang dijadwalkan (dan bukan hari libur). Jika dimatikan, kartu bisa discan kapan saja.</div>
+        </div>
+
+        <div class="card border-0 shadow-sm p-4 mb-4">
+          <div class="row g-3 align-items-end mb-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Jadwal untuk</label>
+              <select id="jadwal-kelas" class="form-select" onchange="renderJadwalGrid()"></select>
+            </div>
+            <div class="col-md-6 text-md-end">
+              <button class="btn btn-outline-danger d-none" id="btn-hapus-jadwal-khusus" onclick="hapusJadwalKhusus()">
+                <i class="bi bi-arrow-counterclockwise me-1"></i> Kembali ke jadwal umum
+              </button>
+            </div>
+          </div>
+          <div id="jadwal-info" class="alert alert-info py-2 small"></div>
+          <div class="table-responsive">
+            <table class="table align-middle">
+              <thead class="table-light">
+                <tr><th>Hari</th><th class="text-center" width="90">Aktif</th><th>Jam Buka</th><th>Batas Tepat Waktu</th><th>Jam Tutup</th></tr>
+              </thead>
+              <tbody id="jadwal-tbody"></tbody>
+            </table>
+          </div>
+          <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-2">
+            <div class="text-muted small">Scan setelah <b>Batas Tepat Waktu</b> dicatat <b>Hadir (Terlambat)</b>. Scan sebelum Jam Buka atau sesudah Jam Tutup ditolak.</div>
+            <button class="btn btn-primary" onclick="simpanJadwal()"><i class="bi bi-save me-1"></i> Simpan Jadwal</button>
+          </div>
+        </div>
+
+        <div class="card border-0 shadow-sm p-4">
+          <h5 class="fw-bold mb-3">Hari Libur</h5>
+          <form id="form-libur" class="row g-2 align-items-end mb-3">
+            <div class="col-md-3">
+              <label class="form-label fw-semibold small mb-1">Tanggal Mulai</label>
+              <input type="date" id="libur-mulai" class="form-control" required>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold small mb-1">Sampai (opsional)</label>
+              <input type="date" id="libur-selesai" class="form-control">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold small mb-1">Keterangan</label>
+              <input type="text" id="libur-ket" class="form-control" placeholder="Contoh: Libur Semester" maxlength="80" required>
+            </div>
+            <div class="col-md-2">
+              <button type="submit" class="btn btn-success w-100"><i class="bi bi-plus-lg me-1"></i> Tambah</button>
+            </div>
+          </form>
+          <div class="table-responsive" style="max-height: 320px; overflow-y: auto;">
+            <table class="table table-sm align-middle mb-0">
+              <thead class="table-light">
+                <tr><th>Tanggal</th><th>Hari</th><th>Keterangan</th><th width="80" class="text-center">Aksi</th></tr>
+              </thead>
+              <tbody id="libur-tbody"></tbody>
             </table>
           </div>
         </div>
@@ -364,12 +459,13 @@
               <thead class="table-light text-center">
                 <tr>
                   <th width="50">No.</th><th>NIS</th><th class="text-start">Nama Siswa</th><th>Kelas</th><th>L/P</th>
-                  <th>Hadir</th><th>Sakit</th><th>Izin</th><th>Alfa</th><th>Persentase</th>
+                  <th>Hadir</th><th>Sakit</th><th>Izin</th><th>Alfa</th><th>Terlambat</th><th>Persentase</th>
                 </tr>
               </thead>
               <tbody id="rekap-tbody"></tbody>
             </table>
           </div>
+          <div class="text-muted small mt-2">Terlambat sudah termasuk dalam jumlah Hadir.</div>
         </div>
       </div>
 
@@ -433,7 +529,8 @@
             </div>
             <div class="mb-3">
               <label class="form-label">Kelas <span class="text-danger">*</span></label>
-              <input type="text" id="input-kelas" class="form-control" placeholder="Contoh: X-IPA-1" required>
+              <select id="input-kelas" class="form-select" required></select>
+              <div class="form-text">Daftar kelas diambil dari menu Master Kelas.</div>
             </div>
             <div class="mb-3">
               <label class="form-label">Jenis Kelamin <span class="text-danger">*</span></label>
@@ -457,6 +554,39 @@
     </div>
   </div>
 
+  <!-- MODAL KELAS -->
+  <div class="modal fade" id="modalKelas" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title fw-bold" id="modalKelasTitle">Tambah Kelas</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <form id="form-kelas">
+          <div class="modal-body">
+            <input type="hidden" id="edit-old-kelas">
+            <div class="mb-3">
+              <label class="form-label">Nama Kelas <span class="text-danger">*</span></label>
+              <input type="text" id="kelas-nama" class="form-control" placeholder="Contoh: X-IPA-1" maxlength="30" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Wali Kelas</label>
+              <input type="text" id="kelas-wali" class="form-control" placeholder="Opsional">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Keterangan</label>
+              <input type="text" id="kelas-ket" class="form-control" placeholder="Opsional">
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+            <button type="submit" class="btn btn-primary">Simpan Kelas</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
   <script>
@@ -465,10 +595,13 @@
     // Tempel URL Web App Apps Script (berakhiran /exec) di bawah ini,
     // atau biarkan kosong lalu isi lewat layar login (tersimpan di browser).
     // =====================================================
-    const DEFAULT_API_URL = 'https://script.google.com/macros/s/AKfycbyGZhzhAMnDgRn-iG48hn-meVtrDxla36hKPe6s4n5pImvcXbIU5JlO6Q6TFNZymlN9tA/exec';
+    const DEFAULT_API_URL = '';
 
     // STATE GLOBAL
     let masterSiswaList = [];
+    let masterKelasList = [];
+    let jadwalData = { enabled: true, rows: [], libur: [] };
+    let currentAbsJadwal = null;
     let currentRekapData = [];
     let currentRekapPeriodLabel = '';
     let modalSiswaInstance;
@@ -673,6 +806,8 @@
       else if (menuName === 'siswa') loadDataSiswa();
       else if (menuName === 'absensi') populateAbsensiDropdowns();
       else if (menuName === 'rekap') populateRekapDropdowns();
+      else if (menuName === 'kelas') loadKelasPage();
+      else if (menuName === 'jadwal') loadJadwalPage();
     }
 
     // ==========================================
@@ -740,6 +875,7 @@
         scanRecent = res.data.slice();
         scanTotalHadir = res.totalHadir;
         renderScanRecent();
+        document.getElementById('scan-jadwal-info').innerHTML = jadwalSummary(res.jadwal, 'jadwal umum');
       }
     }
 
@@ -756,7 +892,7 @@
           <td>${esc(r.nis)}</td>
           <td>${esc(r.nama)}</td>
           <td><span class="badge bg-secondary">${esc(r.kelas)}</span></td>
-          <td><span class="badge bg-success">${esc(r.status)}</span></td>
+          <td><span class="badge bg-success">${esc(r.status)}</span>${r.keterangan === 'Terlambat' ? ' <span class="badge bg-warning text-dark">Terlambat</span>' : ''}</td>
         </tr>`).join('');
     }
 
@@ -785,9 +921,11 @@
 
       if (res.success && res.type === 'success') {
         const s = res.siswa;
-        showScanResult('ok', 'bi-check-circle-fill', s.nama, `${s.kelas} • NIS ${s.nis}`, `Hadir pukul ${res.waktu}`);
-        beep('ok');
-        scanRecent.unshift({ nis: s.nis, nama: s.nama, kelas: s.kelas, status: 'Hadir', waktu: res.waktu });
+        const late = res.keterangan === 'Terlambat';
+        showScanResult(late ? 'dup' : 'ok', 'bi-check-circle-fill', s.nama, `${s.kelas} • NIS ${s.nis}`,
+          `Hadir pukul ${res.waktu}` + (late ? ' • TERLAMBAT' : ''));
+        beep(late ? 'dup' : 'ok');
+        scanRecent.unshift({ nis: s.nis, nama: s.nama, kelas: s.kelas, status: 'Hadir', waktu: res.waktu, keterangan: res.keterangan });
         scanTotalHadir++;
         renderScanRecent();
       } else if (res.success && res.type === 'duplicate') {
@@ -795,6 +933,10 @@
         const info = res.status === 'Hadir' ? `Sudah absen pukul ${res.waktu || '-'}` : `Sudah tercatat: ${res.status}`;
         showScanResult('dup', 'bi-exclamation-circle-fill', s.nama, `${s.kelas} • NIS ${s.nis}`, info);
         beep('dup');
+      } else if (res.type === 'closed') {
+        const s = res.siswa;
+        showScanResult('err', 'bi-slash-circle-fill', s ? s.nama : 'Absen tidak dibuka', s ? `${s.kelas} • NIS ${s.nis}` : '', res.message);
+        beep('err');
       } else if (res.type === 'unknown') {
         showScanResult('err', 'bi-x-circle-fill', 'Kartu tidak terdaftar', 'UID: ' + res.uid, 'Daftarkan kartu ini di menu Data Siswa');
         beep('err');
@@ -839,19 +981,28 @@
     // 5. DATA SISWA
     // ==========================================
     async function loadDataSiswa() {
-      const res = await api('getSiswaList');
-      if (res.success) {
+      const [res, resKelas] = await Promise.all([api('getSiswaList'), api('getKelasList')]);
+      if (res.success && resKelas.success) {
         masterSiswaList = res.data;
+        masterKelasList = resKelas.data;
         populateSiswaKelasFilterDropdown();
         filterTabelSiswa();
         return true;
       }
-      if (res.message && !res.unauthorized) alert(res.message);
+      const failed = res.success ? resKelas : res;
+      if (failed.message && !failed.unauthorized) alert(failed.message);
       return false;
     }
 
+    function fillKelasSelect(id, selected) {
+      const names = masterKelasList.map(k => k.kelas);
+      if (selected && !names.includes(selected)) names.unshift(selected);
+      document.getElementById(id).innerHTML = names
+        .map(n => `<option value="${esc(n)}" ${n === selected ? 'selected' : ''}>${esc(n)}</option>`).join('');
+    }
+
     function kelasOptions(selected, firstLabel, firstValue) {
-      const sorted = Array.from(new Set(masterSiswaList.map(s => s.kelas))).sort();
+      const sorted = masterKelasList.map(k => k.kelas);
       let html = `<option value="${firstValue}">${firstLabel}</option>`;
       sorted.forEach(k => {
         html += `<option value="${esc(k)}" ${k === selected ? 'selected' : ''}>${esc(k)}</option>`;
@@ -903,9 +1054,14 @@
     }
 
     function openModalSiswa() {
+      if (masterKelasList.length === 0) {
+        alert('Belum ada kelas. Tambahkan dulu kelas di menu Master Kelas.');
+        return;
+      }
       document.getElementById('modalSiswaTitle').textContent = 'Tambah Siswa Baru';
       document.getElementById('edit-old-nis').value = '';
       document.getElementById('form-siswa').reset();
+      fillKelasSelect('input-kelas', '');
       modalSiswaInstance.show();
     }
 
@@ -916,7 +1072,7 @@
       document.getElementById('edit-old-nis').value = siswa.nis;
       document.getElementById('input-nis').value = siswa.nis;
       document.getElementById('input-nama').value = siswa.nama;
-      document.getElementById('input-kelas').value = siswa.kelas;
+      fillKelasSelect('input-kelas', siswa.kelas);
       document.getElementById('input-jk').value = siswa.jk;
       document.getElementById('input-uid').value = siswa.uid || '';
       modalSiswaInstance.show();
@@ -1029,6 +1185,268 @@
     }
 
     // ==========================================
+    // 5b. MASTER KELAS & JADWAL ABSEN
+    // ==========================================
+    const HARI_NAMA = ['', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+    const JADWAL_DEFAULT = { buka: '05:00', batas: '07:15', tutup: '12:00' };
+
+    // Ringkasan jadwal (dipakai di halaman Scan dan Input Absensi)
+    function jadwalSummary(jd, scope) {
+      if (!jd) return '';
+      const sc = scope ? ` (${esc(scope)})` : '';
+      if (!jd.enabled) return '<i class="bi bi-info-circle me-1"></i>Jadwal tidak diterapkan: kartu dapat discan kapan saja.';
+      if (jd.status === 'libur') {
+        return `<i class="bi bi-calendar-x me-1"></i><b>Hari libur</b>${jd.ket ? ': ' + esc(jd.ket) : ''}. Scan kartu tidak dicatat.`;
+      }
+      if (jd.status === 'nonaktif' || jd.status === 'tidak_ada') {
+        return `<i class="bi bi-calendar-x me-1"></i>Tidak ada jadwal absen pada hari ${HARI_NAMA[jd.hari]}${sc}.`;
+      }
+      return `<i class="bi bi-clock me-1"></i>Jadwal ${HARI_NAMA[jd.hari]}${sc}: buka <b>${esc(jd.buka)}</b> • tepat waktu s.d. <b>${esc(jd.batas)}</b> • tutup <b>${esc(jd.tutup)}</b>`;
+    }
+
+    function renderAbsJadwalInfo(jd, kelas) {
+      const box = document.getElementById('abs-jadwal-info');
+      currentAbsJadwal = jd || null;
+      if (!jd) { box.classList.add('d-none'); return; }
+      const warn = ['libur', 'nonaktif', 'tidak_ada'].includes(jd.status);
+      box.className = 'alert py-2 small ' + (warn ? 'alert-warning' : 'alert-secondary');
+      box.innerHTML = jadwalSummary(jd, 'kelas ' + kelas);
+    }
+
+    // ---------- Master Kelas ----------
+    async function loadKelasPage() {
+      const res = await api('getKelasList');
+      if (!res.success) {
+        if (res.message && !res.unauthorized) alert(res.message);
+        return;
+      }
+      masterKelasList = res.data;
+      renderTabelKelas();
+    }
+
+    function renderTabelKelas() {
+      const tbody = document.getElementById('kelas-tbody');
+      if (masterKelasList.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">Belum ada kelas. Klik "Tambah Kelas" untuk memulai.</td></tr>';
+        return;
+      }
+      const dash = '<span class="text-muted small">-</span>';
+      tbody.innerHTML = masterKelasList.map((k, i) => `
+        <tr>
+          <td>${i + 1}</td>
+          <td><span class="badge bg-secondary fs-6">${esc(k.kelas)}</span></td>
+          <td>${esc(k.wali) || dash}</td>
+          <td>${esc(k.ket) || dash}</td>
+          <td class="text-center">${k.jumlah}</td>
+          <td class="text-center">
+            <button class="btn btn-sm btn-warning me-1" data-action="edit" data-kelas="${esc(k.kelas)}" title="Edit"><i class="bi bi-pencil"></i></button>
+            <button class="btn btn-sm btn-danger" data-action="delete" data-kelas="${esc(k.kelas)}" title="Hapus"><i class="bi bi-trash"></i></button>
+          </td>
+        </tr>`).join('');
+    }
+
+    function modalKelas() {
+      return bootstrap.Modal.getOrCreateInstance(document.getElementById('modalKelas'));
+    }
+
+    function openModalKelas() {
+      document.getElementById('modalKelasTitle').textContent = 'Tambah Kelas';
+      document.getElementById('edit-old-kelas').value = '';
+      document.getElementById('form-kelas').reset();
+      modalKelas().show();
+    }
+
+    function editKelasModal(nama) {
+      const k = masterKelasList.find(x => x.kelas === nama);
+      if (!k) return;
+      document.getElementById('modalKelasTitle').textContent = 'Edit Kelas';
+      document.getElementById('edit-old-kelas').value = k.kelas;
+      document.getElementById('kelas-nama').value = k.kelas;
+      document.getElementById('kelas-wali').value = k.wali;
+      document.getElementById('kelas-ket').value = k.ket;
+      modalKelas().show();
+    }
+
+    document.getElementById('kelas-tbody').addEventListener('click', e => {
+      const btn = e.target.closest('button[data-action]');
+      if (!btn) return;
+      if (btn.dataset.action === 'edit') editKelasModal(btn.dataset.kelas);
+      if (btn.dataset.action === 'delete') deleteKelas(btn.dataset.kelas);
+    });
+
+    document.getElementById('form-kelas').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      const oldKelas = document.getElementById('edit-old-kelas').value;
+      const payload = {
+        kelas: document.getElementById('kelas-nama').value,
+        wali: document.getElementById('kelas-wali').value,
+        ket: document.getElementById('kelas-ket').value
+      };
+      const res = oldKelas
+        ? await api('updateKelas', { oldKelas: oldKelas, data: payload })
+        : await api('addKelas', payload);
+      if (res.success) modalKelas().hide();
+      alert(res.message);
+      if (res.success) loadKelasPage();
+    });
+
+    async function deleteKelas(nama) {
+      if (!confirm('Yakin ingin menghapus kelas ' + nama + '? Jadwal khusus kelas ini juga ikut dihapus.')) return;
+      const res = await api('deleteKelas', { kelas: nama });
+      alert(res.message);
+      if (res.success) loadKelasPage();
+    }
+
+    // ---------- Jadwal Absen ----------
+    async function loadJadwalPage() {
+      const [res, resKelas] = await Promise.all([api('getJadwal'), api('getKelasList')]);
+      if (!res.success || !resKelas.success) {
+        const failed = res.success ? resKelas : res;
+        if (failed.message && !failed.unauthorized) alert(failed.message);
+        return;
+      }
+      jadwalData = res;
+      masterKelasList = resKelas.data;
+
+      const sel = document.getElementById('jadwal-kelas');
+      const current = sel.value || 'ALL';
+      sel.innerHTML = '<option value="ALL">Semua Kelas (Jadwal Umum)</option>' + masterKelasList.map(k => {
+        const khusus = jadwalData.rows.some(r => r.kelas === k.kelas);
+        return `<option value="${esc(k.kelas)}">${esc(k.kelas)}${khusus ? ' • jadwal khusus' : ''}</option>`;
+      }).join('');
+      sel.value = Array.from(sel.options).some(o => o.value === current) ? current : 'ALL';
+
+      document.getElementById('jadwal-enabled').checked = !!jadwalData.enabled;
+      renderJadwalGrid();
+      renderLibur();
+    }
+
+    function renderJadwalGrid() {
+      const kelas = document.getElementById('jadwal-kelas').value || 'ALL';
+      const own = jadwalData.rows.filter(r => r.kelas === kelas);
+      const isKhusus = kelas !== 'ALL' && own.length > 0;
+      const source = own.length ? own : (kelas === 'ALL' ? [] : jadwalData.rows.filter(r => r.kelas === 'ALL'));
+      const byHari = {};
+      source.forEach(r => { byHari[r.hari] = r; });
+
+      let html = '';
+      for (let h = 1; h <= 7; h++) {
+        const r = byHari[h] || { aktif: false };
+        const buka = r.buka || JADWAL_DEFAULT.buka;
+        const batas = r.batas || JADWAL_DEFAULT.batas;
+        const tutup = r.tutup || JADWAL_DEFAULT.tutup;
+        const dis = r.aktif ? '' : 'disabled';
+        html += `
+          <tr data-hari="${h}">
+            <td class="fw-semibold">${HARI_NAMA[h]}</td>
+            <td class="text-center">
+              <div class="form-check form-switch d-inline-block m-0">
+                <input class="form-check-input jd-aktif" type="checkbox" role="switch" ${r.aktif ? 'checked' : ''}>
+              </div>
+            </td>
+            <td><input type="time" class="form-control form-control-sm jd-buka" value="${esc(buka)}" ${dis}></td>
+            <td><input type="time" class="form-control form-control-sm jd-batas" value="${esc(batas)}" ${dis}></td>
+            <td><input type="time" class="form-control form-control-sm jd-tutup" value="${esc(tutup)}" ${dis}></td>
+          </tr>`;
+      }
+      document.getElementById('jadwal-tbody').innerHTML = html;
+
+      const info = document.getElementById('jadwal-info');
+      if (kelas === 'ALL') {
+        info.textContent = 'Jadwal umum berlaku untuk semua kelas, kecuali kelas yang memiliki jadwal khusus.';
+      } else if (isKhusus) {
+        info.textContent = 'Kelas ' + kelas + ' memakai jadwal khusus yang menggantikan jadwal umum.';
+      } else {
+        info.textContent = 'Kelas ' + kelas + ' belum punya jadwal khusus dan mengikuti jadwal umum. Ubah lalu simpan untuk membuat jadwal khusus.';
+      }
+      document.getElementById('btn-hapus-jadwal-khusus').classList.toggle('d-none', !isKhusus);
+    }
+
+    // Matikan/aktifkan kolom jam sesuai saklar "Aktif" pada baris tersebut
+    document.getElementById('jadwal-tbody').addEventListener('change', e => {
+      if (!e.target.classList.contains('jd-aktif')) return;
+      const tr = e.target.closest('tr');
+      tr.querySelectorAll('input[type="time"]').forEach(inp => { inp.disabled = !e.target.checked; });
+    });
+
+    async function simpanJadwal() {
+      const kelas = document.getElementById('jadwal-kelas').value || 'ALL';
+      const rows = Array.from(document.querySelectorAll('#jadwal-tbody tr[data-hari]')).map(tr => ({
+        hari: Number(tr.dataset.hari),
+        aktif: tr.querySelector('.jd-aktif').checked,
+        buka: tr.querySelector('.jd-buka').value,
+        batas: tr.querySelector('.jd-batas').value,
+        tutup: tr.querySelector('.jd-tutup').value
+      }));
+      const res = await api('saveJadwal', { kelas: kelas, rows: rows });
+      alert(res.message);
+      if (res.success) loadJadwalPage();
+    }
+
+    async function hapusJadwalKhusus() {
+      const kelas = document.getElementById('jadwal-kelas').value;
+      if (!kelas || kelas === 'ALL') return;
+      if (!confirm('Hapus jadwal khusus kelas ' + kelas + '? Kelas ini akan mengikuti jadwal umum.')) return;
+      const res = await api('deleteJadwalKelas', { kelas: kelas });
+      alert(res.message);
+      if (res.success) loadJadwalPage();
+    }
+
+    async function toggleJadwalEnabled(cb) {
+      const res = await api('setJadwalAktif', { aktif: cb.checked });
+      if (!res.success) {
+        cb.checked = !cb.checked;
+        alert(res.message);
+      } else {
+        jadwalData.enabled = cb.checked;
+      }
+    }
+
+    // ---------- Hari Libur ----------
+    function renderLibur() {
+      const tbody = document.getElementById('libur-tbody');
+      if (jadwalData.libur.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">Belum ada hari libur.</td></tr>';
+        return;
+      }
+      const today = todayStr();
+      tbody.innerHTML = jadwalData.libur.map(l => {
+        const p = l.tanggal.split('-').map(Number);
+        const hari = HARI_NAMA[((new Date(Date.UTC(p[0], p[1] - 1, p[2])).getUTCDay() + 6) % 7) + 1];
+        return `
+          <tr class="${l.tanggal < today ? 'text-muted' : ''}">
+            <td>${esc(formatTanggalIndo(l.tanggal))}</td>
+            <td>${hari}</td>
+            <td>${esc(l.ket)}</td>
+            <td class="text-center"><button class="btn btn-sm btn-outline-danger" data-tanggal="${esc(l.tanggal)}" title="Hapus"><i class="bi bi-trash"></i></button></td>
+          </tr>`;
+      }).join('');
+    }
+
+    document.getElementById('form-libur').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      const res = await api('addLibur', {
+        mulai: document.getElementById('libur-mulai').value,
+        selesai: document.getElementById('libur-selesai').value,
+        ket: document.getElementById('libur-ket').value
+      });
+      alert(res.message);
+      if (res.success) {
+        document.getElementById('form-libur').reset();
+        loadJadwalPage();
+      }
+    });
+
+    document.getElementById('libur-tbody').addEventListener('click', async e => {
+      const btn = e.target.closest('button[data-tanggal]');
+      if (!btn) return;
+      if (!confirm('Hapus hari libur ' + formatTanggalIndo(btn.dataset.tanggal) + '?')) return;
+      const res = await api('deleteLibur', { tanggalList: [btn.dataset.tanggal] });
+      alert(res.message);
+      if (res.success) loadJadwalPage();
+    });
+
+    // ==========================================
     // 6. INPUT ABSENSI MANUAL
     // ==========================================
     async function populateAbsensiDropdowns() {
@@ -1048,7 +1466,10 @@
         return;
       }
       const res = await api('getAbsensiByDateAndClass', { tanggal: tanggal, kelas: kelas });
-      if (res.success) renderTabelAbsensi(tanggal, kelas, res.data);
+      if (res.success) {
+        renderTabelAbsensi(tanggal, kelas, res.data);
+        renderAbsJadwalInfo(res.jadwal, kelas);
+      }
       else if (res.message && !res.unauthorized) alert(res.message);
     }
 
@@ -1071,7 +1492,7 @@
           <input type="radio" class="btn-check" name="status_${idx}" id="abs_${idx}_${st}" value="${st}" ${s.status === st ? 'checked' : ''}>
           <label class="btn btn-outline-${colors[st]} btn-sm" for="abs_${idx}_${st}">${st}</label>`).join('');
         const waktu = s.waktu
-          ? `<span class="badge bg-${s.metode === 'RFID' ? 'primary' : 'secondary'}">${esc(s.waktu)}</span>`
+          ? `<span class="badge bg-${s.metode === 'RFID' ? 'primary' : 'secondary'}">${esc(s.waktu)}</span>${s.keterangan === 'Terlambat' ? ' <span class="badge bg-warning text-dark">Terlambat</span>' : ''}`
           : (s.tercatat ? '<span class="text-muted small">manual</span>' : '<span class="badge bg-light text-dark border">belum scan</span>');
         return `
           <tr data-nis="${esc(s.nis)}">
@@ -1101,6 +1522,11 @@
         const checked = tr.querySelector('input[type="radio"]:checked');
         return { nis: tr.dataset.nis, status: checked ? checked.value : 'Alpa' };
       });
+
+      if (currentAbsJadwal && ['libur', 'nonaktif', 'tidak_ada'].includes(currentAbsJadwal.status)) {
+        const sebab = currentAbsJadwal.status === 'libur' ? 'adalah hari libur' : 'tidak ada jadwal absen';
+        if (!confirm('Tanggal ini ' + sebab + '. Siswa yang belum scan akan tercatat Alpa. Tetap simpan absensi?')) return;
+      }
 
       const res = await api('saveAbsensiBatch', { tanggal: tanggal, kelas: kelas, records: records });
       alert(res.message);
@@ -1154,7 +1580,7 @@
       document.getElementById('rekap-subtitle').textContent = currentRekapPeriodLabel;
 
       if (data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted py-4">Tidak ada data untuk periode/kelas ini.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="11" class="text-center text-muted py-4">Tidak ada data untuk periode/kelas ini.</td></tr>';
       } else {
         tbody.innerHTML = data.map((r, i) => `
           <tr>
@@ -1167,6 +1593,7 @@
             <td class="text-center text-warning fw-bold">${r.sakit}</td>
             <td class="text-center text-info fw-bold">${r.izin}</td>
             <td class="text-center text-danger fw-bold">${r.alfa}</td>
+            <td class="text-center fw-bold">${r.terlambat}</td>
             <td class="text-center fw-bold">${esc(r.persentase)}%</td>
           </tr>`).join('');
       }
@@ -1182,15 +1609,15 @@
         ['LAPORAN REKAPITULASI ABSENSI SISWA'],
         [currentRekapPeriodLabel + ' | ' + kelasText],
         [],
-        ['No.', 'NIS', 'Nama Siswa', 'Kelas', 'Jenis Kelamin (L/P)', 'Hadir', 'Sakit', 'Izin', 'Alfa', 'Persentase Kehadiran']
+        ['No.', 'NIS', 'Nama Siswa', 'Kelas', 'Jenis Kelamin (L/P)', 'Hadir', 'Sakit', 'Izin', 'Alfa', 'Terlambat', 'Persentase Kehadiran']
       ];
       currentRekapData.forEach((r, idx) => {
-        aoa.push([idx + 1, r.nis, r.nama, r.kelas, r.jk, r.hadir, r.sakit, r.izin, r.alfa, r.persentase + '%']);
+        aoa.push([idx + 1, r.nis, r.nama, r.kelas, r.jk, r.hadir, r.sakit, r.izin, r.alfa, r.terlambat, r.persentase + '%']);
       });
 
       const wb = XLSX.utils.book_new();
       const ws = XLSX.utils.aoa_to_sheet(aoa);
-      ws['!cols'] = [{ wch: 5 }, { wch: 15 }, { wch: 30 }, { wch: 12 }, { wch: 18 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 20 }];
+      ws['!cols'] = [{ wch: 5 }, { wch: 15 }, { wch: 30 }, { wch: 12 }, { wch: 18 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 11 }, { wch: 20 }];
       XLSX.utils.book_append_sheet(wb, ws, 'Rekap_Absensi');
       XLSX.writeFile(wb, `Rekap_Absensi_${currentRekapPeriodLabel.replace(/[^a-zA-Z0-9]/g, '_')}.xlsx`);
     }
@@ -1214,22 +1641,23 @@
 
       doc.autoTable({
         startY: 30,
-        head: [['No', 'NIS', 'Nama Siswa', 'Kelas', 'L/P', 'Hadir', 'Sakit', 'Izin', 'Alfa', 'Kehadiran']],
-        body: currentRekapData.map((r, i) => [i + 1, r.nis, r.nama, r.kelas, r.jk, r.hadir, r.sakit, r.izin, r.alfa, r.persentase + '%']),
+        head: [['No', 'NIS', 'Nama Siswa', 'Kelas', 'L/P', 'Hadir', 'Sakit', 'Izin', 'Alfa', 'Terlambat', 'Kehadiran']],
+        body: currentRekapData.map((r, i) => [i + 1, r.nis, r.nama, r.kelas, r.jk, r.hadir, r.sakit, r.izin, r.alfa, r.terlambat, r.persentase + '%']),
         theme: 'grid',
-        styles: { fontSize: 8.5, cellPadding: 2.5, valign: 'middle' },
+        styles: { fontSize: 8, cellPadding: 2, valign: 'middle' },
         headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: 'bold', halign: 'center' },
         columnStyles: {
-          0: { halign: 'center', cellWidth: 10 },
-          1: { halign: 'center', cellWidth: 22 },
+          0: { halign: 'center', cellWidth: 9 },
+          1: { halign: 'center', cellWidth: 20 },
           2: { halign: 'left' },
-          3: { halign: 'center', cellWidth: 20 },
-          4: { halign: 'center', cellWidth: 12 },
-          5: { halign: 'center', cellWidth: 13 },
-          6: { halign: 'center', cellWidth: 13 },
-          7: { halign: 'center', cellWidth: 13 },
-          8: { halign: 'center', cellWidth: 13 },
-          9: { halign: 'center', cellWidth: 20, fontStyle: 'bold' }
+          3: { halign: 'center', cellWidth: 18 },
+          4: { halign: 'center', cellWidth: 10 },
+          5: { halign: 'center', cellWidth: 12 },
+          6: { halign: 'center', cellWidth: 12 },
+          7: { halign: 'center', cellWidth: 12 },
+          8: { halign: 'center', cellWidth: 12 },
+          9: { halign: 'center', cellWidth: 19 },
+          10: { halign: 'center', cellWidth: 19, fontStyle: 'bold' }
         },
         margin: { left: 14, right: 14 }
       });
