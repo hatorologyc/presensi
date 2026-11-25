@@ -58,6 +58,33 @@
     .scan-result.err  { background: #dc2626; }
     .scan-result .big-icon { font-size: 3.5rem; line-height: 1; }
     .scan-result .scan-name { font-size: 2rem; font-weight: 700; }
+
+    /* ===== Mode Layar Tampilan (monitor 2 / tampilan umum) ===== */
+    #btn-fullscreen { display: none; }
+    body.display-mode .sidebar,
+    body.display-mode .topbar-mobile,
+    body.display-mode .admin-only,
+    body.display-mode .col-nis { display: none !important; }
+    body.display-mode { background: #0f172a; }
+    body.display-mode .main-content { margin-left: 0; padding: 2vh 3vw; }
+    body.display-mode #view-scan { color: #e2e8f0; }
+    body.display-mode #view-scan .card { background: #1e293b; color: #e2e8f0; }
+    body.display-mode #view-scan .table { --bs-table-bg: transparent; --bs-table-color: #e2e8f0; --bs-table-border-color: #334155; font-size: 1.2rem; }
+    body.display-mode #view-scan .table-light { --bs-table-bg: #334155; --bs-table-color: #e2e8f0; }
+    body.display-mode #view-scan .text-muted { color: #94a3b8 !important; }
+    body.display-mode #view-scan h3 { font-size: 2.4rem; }
+    body.display-mode #scan-clock { font-size: 3.4rem; }
+    body.display-mode #scan-date { font-size: 1.2rem; color: #94a3b8; }
+    body.display-mode #scan-jadwal-info { font-size: 1.1rem !important; background: #1e293b; border-color: #334155; color: #cbd5e1; }
+    body.display-mode #scan-input { font-size: 1.4rem; background: #0f172a; color: #e2e8f0; border-color: #334155; }
+    body.display-mode .scan-result { min-height: 40vh; }
+    body.display-mode .scan-result.idle { background: #1e293b; color: #94a3b8; }
+    body.display-mode .scan-result .big-icon { font-size: 6rem; }
+    body.display-mode .scan-result .scan-name { font-size: clamp(2.5rem, 5vw, 5rem); }
+    body.display-mode .scan-result .fs-4 { font-size: 2.2rem !important; }
+    body.display-mode .scan-result .fs-5 { font-size: 1.9rem !important; }
+    body.display-mode #btn-fullscreen { display: inline-flex; position: fixed; right: 16px; bottom: 16px; z-index: 1500; opacity: .3; }
+    body.display-mode #btn-fullscreen:hover { opacity: 1; }
   </style>
 </head>
 <body>
@@ -126,7 +153,7 @@
     </div>
 
     <div class="main-content">
-      <div class="d-flex justify-content-between align-items-center mb-4 d-md-none bg-white p-3 rounded shadow-sm">
+      <div class="topbar-mobile d-flex justify-content-between align-items-center mb-4 d-md-none bg-white p-3 rounded shadow-sm">
         <button class="btn btn-primary" onclick="toggleSidebar()"><i class="bi bi-list"></i> Menu</button>
         <span class="fw-bold">Absensi Siswa</span>
       </div>
@@ -205,7 +232,13 @@
       <!-- SCAN RFID -->
       <div id="view-scan" class="menu-section d-none">
         <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-          <h3 class="fw-bold mb-0">Scan Kartu RFID</h3>
+          <div>
+            <h3 class="fw-bold mb-1" id="scan-title">Scan Kartu RFID</h3>
+            <button class="btn btn-outline-primary btn-sm admin-only" onclick="openDisplayWindow()">
+              <i class="bi bi-display me-1"></i> Buka Layar Tampilan (Monitor 2)
+            </button>
+            <div class="small text-muted admin-only mt-1">Seret jendela yang terbuka ke monitor kedua, klik sekali (mengaktifkan suara), lalu klik dua kali atau tombol layar penuh.</div>
+          </div>
           <div class="text-end">
             <div class="fs-3 fw-bold" id="scan-clock">--:--:--</div>
             <div class="text-muted small" id="scan-date"></div>
@@ -217,7 +250,7 @@
         <div class="card border-0 shadow-sm p-4 mb-3">
           <label class="form-label fw-semibold" for="scan-input"><i class="bi bi-credit-card-2-front me-1"></i> Tempelkan kartu pada reader</label>
           <input type="text" id="scan-input" class="form-control form-control-lg" placeholder="Menunggu scan kartu..." autocomplete="off" autocapitalize="off" spellcheck="false">
-          <div class="form-text">Biarkan halaman ini terbuka. Kursor otomatis kembali ke kolom ini agar reader RFID selalu terbaca.</div>
+          <div class="form-text admin-only">Biarkan halaman ini terbuka. Kursor otomatis kembali ke kolom ini agar reader RFID selalu terbaca.</div>
         </div>
 
         <div id="scan-result" class="scan-result idle mb-3">
@@ -232,7 +265,7 @@
           </div>
           <div class="table-responsive">
             <table class="table table-sm align-middle mb-0">
-              <thead class="table-light"><tr><th>Jam</th><th>NIS</th><th>Nama</th><th>Kelas</th><th>Status</th></tr></thead>
+              <thead class="table-light"><tr><th>Jam</th><th class="col-nis">NIS</th><th>Nama</th><th>Kelas</th><th>Status</th></tr></thead>
               <tbody id="scan-recent-tbody"></tbody>
             </table>
           </div>
@@ -508,6 +541,10 @@
     </div>
   </div>
 
+  <button id="btn-fullscreen" class="btn btn-dark btn-sm align-items-center gap-1" onclick="toggleFullscreen()" title="Layar penuh (atau klik dua kali di mana saja)">
+    <i class="bi bi-fullscreen"></i> Layar Penuh
+  </button>
+
   <!-- MODAL SISWA -->
   <div class="modal fade" id="modalSiswa" tabindex="-1">
     <div class="modal-dialog">
@@ -598,6 +635,8 @@
     const DEFAULT_API_URL = '';
 
     // STATE GLOBAL
+    // Layar Tampilan = jendela terpisah (?layar=1) untuk monitor kedua / tampilan umum
+    const DISPLAY_MODE = new URLSearchParams(location.search).get('layar') === '1';
     let masterSiswaList = [];
     let masterKelasList = [];
     let jadwalData = { enabled: true, rows: [], libur: [] };
@@ -665,6 +704,13 @@
     // ---------- Inisialisasi ----------
     document.addEventListener('DOMContentLoaded', () => {
       modalSiswaInstance = new bootstrap.Modal(document.getElementById('modalSiswa'));
+
+      if (DISPLAY_MODE) {
+        document.body.classList.add('display-mode');
+        document.title = 'Layar Absensi Siswa';
+        document.getElementById('scan-title').textContent = 'Absensi Siswa';
+        document.getElementById('scan-input').placeholder = 'Tempelkan kartu Anda pada reader...';
+      }
 
       const today = todayStr();
       document.getElementById('abs-tanggal').value = today;
@@ -747,7 +793,7 @@
     function showApp() {
       document.getElementById('login-screen').style.display = 'none';
       document.getElementById('app-screen').style.display = 'block';
-      switchMenu('dashboard');
+      switchMenu(DISPLAY_MODE ? 'scan' : 'dashboard');
     }
 
     function logoutApp() {
@@ -831,7 +877,7 @@
     // ==========================================
     // 4. SCAN RFID
     // ==========================================
-    let scanClockTimer = null, scanFocusTimer = null, scanResetTimer = null;
+    let scanClockTimer = null, scanFocusTimer = null, scanResetTimer = null, scanRefreshTimer = null;
     let scanQueue = [], scanBusy = false;
     let scanRecent = [], scanTotalHadir = 0;
     let audioCtx = null;
@@ -847,12 +893,15 @@
       scanFocusTimer = setInterval(keepScanFocus, 1000);
       keepScanFocus();
       loadScanToday();
+      // Layar tampilan menyegarkan daftar scan tiap 30 detik (mis. scan dari komputer lain / pergantian hari)
+      if (DISPLAY_MODE) scanRefreshTimer = setInterval(loadScanToday, 30000);
     }
 
     function stopScanMode() {
       clearInterval(scanClockTimer);
       clearInterval(scanFocusTimer);
-      scanClockTimer = scanFocusTimer = null;
+      clearInterval(scanRefreshTimer);
+      scanClockTimer = scanFocusTimer = scanRefreshTimer = null;
     }
 
     function keepScanFocus() {
@@ -892,7 +941,7 @@
       tbody.innerHTML = scanRecent.slice(0, 15).map(r => `
         <tr>
           <td class="fw-semibold">${esc(r.waktu)}</td>
-          <td>${esc(r.nis)}</td>
+          <td class="col-nis">${esc(r.nis)}</td>
           <td>${esc(r.nama)}</td>
           <td><span class="badge bg-secondary">${esc(r.kelas)}</span></td>
           <td><span class="badge bg-success">${esc(r.status)}</span>${r.keterangan === 'Terlambat' ? ' <span class="badge bg-warning text-dark">Terlambat</span>' : ''}</td>
@@ -915,17 +964,20 @@
         const uid = scanQueue.shift();
         const res = await api('scanRfid', { uid: uid }, { silent: true });
         handleScanResponse(res, uid);
+        // Kirim hasil ke jendela lain (admin <-> layar tampilan) agar keduanya selalu sama
+        if (scanChannel && res && !res.unauthorized) scanChannel.postMessage({ type: 'scan', res: res, uid: uid });
       }
       scanBusy = false;
     }
 
-    function handleScanResponse(res, uid) {
+    function handleScanResponse(res, uid, remote) {
+      currentScanRemote = !!remote;
       if (res && res.unauthorized) return;
 
       if (res.success && res.type === 'success') {
         const s = res.siswa;
         const late = res.keterangan === 'Terlambat';
-        showScanResult(late ? 'dup' : 'ok', 'bi-check-circle-fill', s.nama, `${s.kelas} • NIS ${s.nis}`,
+        showScanResult(late ? 'dup' : 'ok', 'bi-check-circle-fill', s.nama, siswaLine(s),
           `Hadir pukul ${res.waktu}` + (late ? ' • TERLAMBAT' : ''));
         beep(late ? 'dup' : 'ok');
         scanRecent.unshift({ nis: s.nis, nama: s.nama, kelas: s.kelas, status: 'Hadir', waktu: res.waktu, keterangan: res.keterangan });
@@ -934,11 +986,11 @@
       } else if (res.success && res.type === 'duplicate') {
         const s = res.siswa;
         const info = res.status === 'Hadir' ? `Sudah absen pukul ${res.waktu || '-'}` : `Sudah tercatat: ${res.status}`;
-        showScanResult('dup', 'bi-exclamation-circle-fill', s.nama, `${s.kelas} • NIS ${s.nis}`, info);
+        showScanResult('dup', 'bi-exclamation-circle-fill', s.nama, siswaLine(s), info);
         beep('dup');
       } else if (res.type === 'closed') {
         const s = res.siswa;
-        showScanResult('err', 'bi-slash-circle-fill', s ? s.nama : 'Absen tidak dibuka', s ? `${s.kelas} • NIS ${s.nis}` : '', res.message);
+        showScanResult('err', 'bi-slash-circle-fill', s ? s.nama : 'Absen tidak dibuka', s ? siswaLine(s) : '', res.message);
         beep('err');
       } else if (res.type === 'unknown') {
         showScanResult('err', 'bi-x-circle-fill', 'Kartu tidak terdaftar', 'UID: ' + res.uid, 'Daftarkan kartu ini di menu Data Siswa');
@@ -964,7 +1016,11 @@
       }, 5000);
     }
 
+    // Suara hanya dari layar tampilan bila sedang terbuka; jika tidak ada, dari jendela yang melakukan scan
+    let currentScanRemote = false, displayLastSeen = 0;
     function beep(type) {
+      const allow = DISPLAY_MODE ? true : (!currentScanRemote && Date.now() - displayLastSeen > 12000);
+      if (!allow) return;
       try {
         audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
         const tones = type === 'ok' ? [[880, 0, 0.15]] : type === 'dup' ? [[660, 0, 0.12], [660, 0.18, 0.12]] : [[220, 0, 0.25], [180, 0.3, 0.25]];
@@ -978,6 +1034,58 @@
           osc.stop(audioCtx.currentTime + delay + dur);
         });
       } catch (e) { /* audio opsional */ }
+    }
+
+    // ==========================================
+    // 4b. LAYAR TAMPILAN (MONITOR 2) & SINKRONISASI ANTAR JENDELA
+    // ==========================================
+    function siswaLine(s) {
+      return DISPLAY_MODE ? s.kelas : `${s.kelas} • NIS ${s.nis}`; // NIS tidak ditampilkan di layar umum
+    }
+
+    const scanChannel = ('BroadcastChannel' in window) ? new BroadcastChannel('absensi-scan') : null;
+    if (scanChannel) {
+      scanChannel.onmessage = ev => {
+        const m = ev.data || {};
+        if (m.type === 'display-open') displayLastSeen = Date.now();
+        else if (m.type === 'display-closed') displayLastSeen = 0;
+        else if (m.type === 'scan' && storageGet('absensi_token')) handleScanResponse(m.res, m.uid, true);
+      };
+      if (DISPLAY_MODE) {
+        const hello = () => scanChannel.postMessage({ type: 'display-open' });
+        hello();
+        setInterval(hello, 4000);
+        window.addEventListener('beforeunload', () => scanChannel.postMessage({ type: 'display-closed' }));
+      }
+    }
+
+    function openDisplayWindow() {
+      const url = location.href.split('#')[0].split('?')[0] + '?layar=1';
+      const w = window.open(url, 'layar-absen', 'popup=yes,width=1280,height=720');
+      if (!w) alert('Jendela diblokir browser. Izinkan pop-up untuk situs ini, lalu coba lagi.');
+    }
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        const p = document.documentElement.requestFullscreen && document.documentElement.requestFullscreen();
+        if (p && p.catch) p.catch(() => {});
+      } else if (document.exitFullscreen) {
+        document.exitFullscreen();
+      }
+    }
+
+    if (DISPLAY_MODE) {
+      document.addEventListener('dblclick', toggleFullscreen);
+      // Browser baru mengizinkan suara setelah ada interaksi (klik/ketik) di jendela ini
+      const unlockAudio = () => {
+        try {
+          audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+          if (audioCtx.state === 'suspended') audioCtx.resume();
+        } catch (e) { /* suara opsional */ }
+      };
+      ['pointerdown', 'keydown'].forEach(evt => document.addEventListener(evt, unlockAudio));
+      // Klik di mana saja mengembalikan fokus ke kolom scan
+      document.addEventListener('click', () => { const i = document.getElementById('scan-input'); if (i) i.focus(); });
     }
 
     // ==========================================
