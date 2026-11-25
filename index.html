@@ -80,7 +80,7 @@
       <form id="login-form">
         <div id="api-url-wrapper" class="mb-3 d-none">
           <label class="form-label fw-semibold">URL Web App (Apps Script)</label>
-          <input type="url" id="api-url-input" class="form-control" placeholder="https://script.google.com/macros/s/AKfycbyGZhzhAMnDgRn-iG48hn-meVtrDxla36hKPe6s4n5pImvcXbIU5JlO6Q6TFNZymlN9tA/exec">
+          <input type="url" id="api-url-input" class="form-control" placeholder="https://script.google.com/macros/s/.../exec">
           <div class="form-text">Isi sekali saja. Tersimpan di browser ini.</div>
         </div>
         <div class="mb-3">
@@ -595,7 +595,7 @@
     // Tempel URL Web App Apps Script (berakhiran /exec) di bawah ini,
     // atau biarkan kosong lalu isi lewat layar login (tersimpan di browser).
     // =====================================================
-    const DEFAULT_API_URL = 'https://script.google.com/macros/s/AKfycbyGZhzhAMnDgRn-iG48hn-meVtrDxla36hKPe6s4n5pImvcXbIU5JlO6Q6TFNZymlN9tA/exec';
+    const DEFAULT_API_URL = '';
 
     // STATE GLOBAL
     let masterSiswaList = [];
@@ -648,6 +648,9 @@
           body: JSON.stringify({ action: action, token: storageGet('absensi_token'), payload: payload || {} })
         });
         const res = await resp.json();
+        if (res && !res.success && /is not defined|is not a function/.test(res.message || '')) {
+          res.message += ' | Kode server (Apps Script) belum versi terbaru. Tempel Code.gs lengkap, lalu Deploy > Manage deployments > Edit > New version.';
+        }
         if (res && res.unauthorized) {
           forceLogout(res.message);
         }
