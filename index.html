@@ -94,6 +94,25 @@
     <p class="mt-2 fw-semibold text-dark">Memproses data...</p>
   </div>
 
+  <!-- LAYAR ABSEN (monitor kedua / tampilan umum) -->
+  <div id="display-screen">
+    <div class="ds-header">
+      <div class="ds-title"><i class="bi bi-credit-card-2-front"></i> ABSENSI SISWA</div>
+      <div class="ds-clock">
+        <div id="ds-clock">--:--:--</div>
+        <div id="ds-date"></div>
+      </div>
+    </div>
+    <div id="ds-jadwal" class="ds-jadwal">&nbsp;</div>
+    <div id="ds-result" class="ds-result idle"></div>
+    <div class="ds-recent">
+      <div class="ds-recent-head"><span>Scan Terakhir</span><span class="ds-total">Hadir hari ini: <span id="ds-total">0</span></span></div>
+      <div id="ds-recent"></div>
+    </div>
+    <div id="ds-hint" class="ds-hint"></div>
+    <input id="ds-input" class="ds-hidden-input" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Pembaca kartu RFID">
+  </div>
+
   <!-- 1. HALAMAN LOGIN -->
   <div id="login-screen">
     <div class="card login-card p-4 m-3">
@@ -105,11 +124,6 @@
         <p class="text-muted small">Masukkan password aplikasi untuk masuk</p>
       </div>
       <form id="login-form">
-        <div id="api-url-wrapper" class="mb-3 d-none">
-          <label class="form-label fw-semibold">URL Web App (Apps Script)</label>
-          <input type="url" id="api-url-input" class="form-control" placeholder="https://script.google.com/macros/s/.../exec">
-          <div class="form-text">Isi sekali saja. Tersimpan di browser ini.</div>
-        </div>
         <div class="mb-3">
           <label class="form-label fw-semibold">Password</label>
           <div class="input-group">
@@ -123,9 +137,6 @@
         <button type="submit" class="btn btn-primary btn-lg w-100 fw-semibold">
           <i class="bi bi-box-arrow-in-right me-1"></i> Masuk Aplikasi
         </button>
-        <div class="text-center mt-3">
-          <a href="#" class="small text-muted" onclick="toggleApiUrlField(); return false;">Atur URL server</a>
-        </div>
       </form>
     </div>
   </div>
@@ -140,6 +151,7 @@
       <ul class="nav flex-column mt-3 flex-grow-1">
         <li class="nav-item"><a class="nav-link active" id="nav-dashboard" onclick="switchMenu('dashboard')"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
         <li class="nav-item"><a class="nav-link" id="nav-scan" onclick="switchMenu('scan')"><i class="bi bi-credit-card-2-front"></i> Scan Kartu RFID</a></li>
+        <li class="nav-item"><a class="nav-link" id="nav-layar" onclick="openDisplayWindow()" title="Buka tampilan umum di jendela baru, lalu tarik ke monitor kedua"><i class="bi bi-display"></i> Layar Absen <i class="bi bi-box-arrow-up-right ms-auto small opacity-75"></i></a></li>
         <li class="nav-item"><a class="nav-link" id="nav-absensi" onclick="switchMenu('absensi')"><i class="bi bi-check2-square"></i> Input Absensi</a></li>
         <li class="nav-item"><a class="nav-link" id="nav-siswa" onclick="switchMenu('siswa')"><i class="bi bi-people"></i> Data Siswa</a></li>
         <li class="nav-item"><a class="nav-link" id="nav-kelas" onclick="switchMenu('kelas')"><i class="bi bi-building"></i> Master Kelas</a></li>
@@ -587,6 +599,24 @@
             <button type="submit" class="btn btn-primary">Simpan Data</button>
           </div>
         </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- PERINGATAN SESI AKAN BERAKHIR -->
+  <div class="modal fade" id="modalSesi" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header bg-warning-subtle">
+          <h5 class="modal-title fw-bold"><i class="bi bi-hourglass-split me-1"></i> Sesi akan berakhir</h5>
+        </div>
+        <div class="modal-body">
+          Tidak ada aktivitas. Anda akan keluar otomatis dalam <b id="sesi-sisa">60</b> detik.
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-danger" onclick="logoutApp()">Keluar Sekarang</button>
+          <button type="button" class="btn btn-primary" onclick="extendSession()">Tetap Masuk</button>
+        </div>
       </div>
     </div>
   </div>
