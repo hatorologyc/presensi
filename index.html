@@ -85,6 +85,13 @@
     body.display-mode .scan-result .fs-5 { font-size: 1.9rem !important; }
     body.display-mode #btn-fullscreen { display: inline-flex; position: fixed; right: 16px; bottom: 16px; z-index: 1500; opacity: .3; }
     body.display-mode #btn-fullscreen:hover { opacity: 1; }
+    /* Layar Absen tidak pernah menampilkan form login admin */
+    body.display-mode #login-screen { display: none !important; }
+    #display-wait { position: fixed; inset: 0; z-index: 3000; background: #0f172a; color: #e2e8f0; display: flex; align-items: center; justify-content: center; text-align: center; padding: 24px; }
+    #display-wait.d-none { display: none !important; }
+    #display-wait .dw-icon { font-size: 5rem; color: #60a5fa; }
+    #display-wait h2 { font-weight: 700; margin-top: 12px; }
+    #display-wait p { color: #94a3b8; font-size: 1.2rem; }
   </style>
 </head>
 <body>
@@ -92,25 +99,6 @@
   <div id="loader">
     <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
     <p class="mt-2 fw-semibold text-dark">Memproses data...</p>
-  </div>
-
-  <!-- LAYAR ABSEN (monitor kedua / tampilan umum) -->
-  <div id="display-screen">
-    <div class="ds-header">
-      <div class="ds-title"><i class="bi bi-credit-card-2-front"></i> ABSENSI SISWA</div>
-      <div class="ds-clock">
-        <div id="ds-clock">--:--:--</div>
-        <div id="ds-date"></div>
-      </div>
-    </div>
-    <div id="ds-jadwal" class="ds-jadwal">&nbsp;</div>
-    <div id="ds-result" class="ds-result idle"></div>
-    <div class="ds-recent">
-      <div class="ds-recent-head"><span>Scan Terakhir</span><span class="ds-total">Hadir hari ini: <span id="ds-total">0</span></span></div>
-      <div id="ds-recent"></div>
-    </div>
-    <div id="ds-hint" class="ds-hint"></div>
-    <input id="ds-input" class="ds-hidden-input" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Pembaca kartu RFID">
   </div>
 
   <!-- 1. HALAMAN LOGIN -->
@@ -160,6 +148,9 @@
         <li class="nav-item"><a class="nav-link" id="nav-gantipass" onclick="switchMenu('gantipass')"><i class="bi bi-key"></i> Ganti Password</a></li>
       </ul>
       <div class="p-3 border-top border-secondary">
+        <div class="small text-secondary text-center mb-2" id="sesi-info" title="Sesi admin berakhir otomatis bila tidak ada aktivitas">
+          <i class="bi bi-hourglass-split me-1"></i>Keluar otomatis dalam <span id="sesi-countdown" class="fw-semibold text-light">--:--</span>
+        </div>
         <button class="btn btn-danger w-100" onclick="logoutApp()"><i class="bi bi-box-arrow-left me-1"></i> Log Out</button>
       </div>
     </div>
@@ -557,6 +548,33 @@
     <i class="bi bi-fullscreen"></i> Layar Penuh
   </button>
 
+  <!-- LAYAR ABSEN: pesan bila belum diaktifkan / sesi layar berakhir (tidak pernah menampilkan form login) -->
+  <div id="display-wait" class="d-none">
+    <div class="dw-box">
+      <i class="bi bi-display dw-icon"></i>
+      <h2 id="dw-title">Layar belum diaktifkan</h2>
+      <p id="dw-text">Buka halaman ini dari menu admin: <b>Layar Absen</b>.</p>
+    </div>
+  </div>
+
+  <!-- PERINGATAN SESI ADMIN AKAN BERAKHIR -->
+  <div class="modal fade" id="modalSesi" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header bg-warning-subtle">
+          <h5 class="modal-title fw-bold"><i class="bi bi-hourglass-split me-1"></i> Sesi akan berakhir</h5>
+        </div>
+        <div class="modal-body">
+          Tidak ada aktivitas. Anda akan keluar otomatis dalam <b id="sesi-sisa">60</b> detik.
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-danger" onclick="logoutApp()">Keluar Sekarang</button>
+          <button type="button" class="btn btn-primary" onclick="extendSession()">Tetap Masuk</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL SISWA -->
   <div class="modal fade" id="modalSiswa" tabindex="-1">
     <div class="modal-dialog">
@@ -603,24 +621,6 @@
     </div>
   </div>
 
-  <!-- PERINGATAN SESI AKAN BERAKHIR -->
-  <div class="modal fade" id="modalSesi" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content">
-        <div class="modal-header bg-warning-subtle">
-          <h5 class="modal-title fw-bold"><i class="bi bi-hourglass-split me-1"></i> Sesi akan berakhir</h5>
-        </div>
-        <div class="modal-body">
-          Tidak ada aktivitas. Anda akan keluar otomatis dalam <b id="sesi-sisa">60</b> detik.
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-outline-danger" onclick="logoutApp()">Keluar Sekarang</button>
-          <button type="button" class="btn btn-primary" onclick="extendSession()">Tetap Masuk</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <!-- MODAL KELAS -->
   <div class="modal fade" id="modalKelas" tabindex="-1">
     <div class="modal-dialog">
@@ -658,15 +658,24 @@
 
   <script>
     // =====================================================
-    // KONFIGURASI
-    // Tempel URL Web App Apps Script (berakhiran /exec) di bawah ini,
-    // atau biarkan kosong lalu isi lewat layar login (tersimpan di browser).
+    // KONFIGURASI  (satu-satunya tempat mengisi URL server)
+    // Tempel URL Web App Apps Script (berakhiran /exec) di antara tanda kutip:
+    //   const API_URL = 'https://script.google.com/macros/s/XXXXXXXX/exec';
     // =====================================================
-    const DEFAULT_API_URL = 'https://script.google.com/macros/s/AKfycbyGZhzhAMnDgRn-iG48hn-meVtrDxla36hKPe6s4n5pImvcXbIU5JlO6Q6TFNZymlN9tA/exec';
+    const API_URL = '';
+
+    // Cadangan: bila server tidak mengirim batas diam, admin keluar otomatis setelah 30 menit tanpa aktivitas
+    const DEFAULT_IDLE_SECONDS = 1800;
+    // Peringatan "Sesi akan berakhir" muncul sekian detik sebelum keluar otomatis
+    const SESSION_WARN_SECONDS = 60;
 
     // STATE GLOBAL
-    // Layar Tampilan = jendela terpisah (?layar=1) untuk monitor kedua / tampilan umum
+    // Layar Tampilan = jendela terpisah (?layar=1) untuk monitor kedua / tampilan umum.
+    // Jendela ini memakai token sendiri yang hanya boleh scan kartu, jadi tidak ikut logout bersama admin.
     const DISPLAY_MODE = new URLSearchParams(location.search).get('layar') === '1';
+    const TOKEN_KEY = DISPLAY_MODE ? 'absensi_display_token' : 'absensi_token';
+    // Jendela yang dibuka lewat window.open mewarisi sessionStorage pembukanya: buang token admin dari Layar Absen
+    if (DISPLAY_MODE) { try { sessionStorage.removeItem('absensi_token'); sessionStorage.removeItem('absensi_idle'); } catch (e) {} }
     let masterSiswaList = [];
     let masterKelasList = [];
     let jadwalData = { enabled: true, rows: [], libur: [] };
@@ -696,32 +705,28 @@
     function storageGet(k) { try { return sessionStorage.getItem(k); } catch (e) { return null; } }
     function storageSet(k, v) { try { sessionStorage.setItem(k, v); } catch (e) {} }
     function storageDel(k) { try { sessionStorage.removeItem(k); } catch (e) {} }
-    function getApiUrl() {
-      if (DEFAULT_API_URL) return DEFAULT_API_URL;
-      try { return localStorage.getItem('absensi_api_url') || ''; } catch (e) { return ''; }
-    }
-    function setApiUrl(url) { try { localStorage.setItem('absensi_api_url', url); } catch (e) {} }
+    function getApiUrl() { return String(API_URL || '').trim(); }
 
     // ---------- Pemanggil API ----------
     // Selalu mengembalikan objek {success, message, ...} (tidak pernah melempar error)
     async function api(action, payload, opts) {
       opts = opts || {};
       const url = getApiUrl();
-      if (!url) return { success: false, message: 'URL server belum diatur.' };
+      if (!url) return { success: false, message: 'URL server belum diisi. Isi konstanta API_URL di bagian atas script pada index.html.' };
       if (!opts.silent) showLoader(true);
       try {
         const resp = await fetch(url, {
           method: 'POST',
           // text/plain menghindari preflight CORS yang tidak didukung Apps Script
           headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({ action: action, token: storageGet('absensi_token'), payload: payload || {} })
+          body: JSON.stringify({ action: action, token: storageGet(TOKEN_KEY), payload: payload || {} })
         });
         const res = await resp.json();
         if (res && !res.success && /is not defined|is not a function/.test(res.message || '')) {
           res.message += ' | Kode server (Apps Script) belum versi terbaru. Tempel Code.gs lengkap, lalu Deploy > Manage deployments > Edit > New version.';
         }
         if (res && res.unauthorized) {
-          forceLogout(res.message);
+          if (DISPLAY_MODE) displaySessionEnded(); else forceLogout(res.message);
         }
         return res;
       } catch (e) {
@@ -747,9 +752,11 @@
       document.getElementById('rekap-date').value = today;
       document.getElementById('rekap-month').value = today.slice(0, 7);
 
-      if (!getApiUrl()) document.getElementById('api-url-wrapper').classList.remove('d-none');
+      // URL server hanya dibaca dari index.html: hapus sisa URL lama yang pernah tersimpan di browser ini
+      try { localStorage.removeItem('absensi_api_url'); } catch (e) {}
 
-      if (storageGet('absensi_token')) showApp();
+      if (DISPLAY_MODE) initDisplaySession();
+      else if (storageGet(TOKEN_KEY)) showApp();
 
       // Enter pada kolom UID (reader RFID) tidak boleh men-submit form
       document.getElementById('input-uid').addEventListener('keydown', e => {
@@ -773,12 +780,6 @@
     // ==========================================
     // 1. AUTENTIKASI
     // ==========================================
-    function toggleApiUrlField() {
-      const w = document.getElementById('api-url-wrapper');
-      w.classList.toggle('d-none');
-      document.getElementById('api-url-input').value = getApiUrl();
-    }
-
     function togglePasswordVisibility(inputId, iconId) {
       const pwdInput = document.getElementById(inputId);
       const icon = document.getElementById(iconId);
@@ -796,23 +797,18 @@
       const errBox = document.getElementById('login-error');
       errBox.classList.add('d-none');
 
-      const wrapper = document.getElementById('api-url-wrapper');
-      if (!wrapper.classList.contains('d-none')) {
-        const url = document.getElementById('api-url-input').value.trim();
-        if (!/^https:\/\/script\.google\.com\/.+\/exec$/.test(url)) {
-          errBox.textContent = 'URL Web App tidak valid. Harus diawali https://script.google.com/ dan berakhiran /exec';
-          errBox.classList.remove('d-none');
-          return;
-        }
-        setApiUrl(url);
+      if (!getApiUrl()) {
+        errBox.textContent = 'URL server belum diisi. Isi konstanta API_URL di bagian atas script pada index.html.';
+        errBox.classList.remove('d-none');
+        return;
       }
 
       const pwd = document.getElementById('login-password').value;
       const res = await api('login', { password: pwd });
       if (res.success && res.token) {
-        storageSet('absensi_token', res.token);
+        storageSet(TOKEN_KEY, res.token);
+        storageSet('absensi_idle', String(Number(res.idleSeconds) > 0 ? Number(res.idleSeconds) : DEFAULT_IDLE_SECONDS));
         document.getElementById('login-password').value = '';
-        wrapper.classList.add('d-none');
         showApp();
       } else {
         errBox.textContent = res.message || 'Login gagal.';
@@ -823,21 +819,145 @@
     function showApp() {
       document.getElementById('login-screen').style.display = 'none';
       document.getElementById('app-screen').style.display = 'block';
+      if (!DISPLAY_MODE) startSessionWatch();
       switchMenu(DISPLAY_MODE ? 'scan' : 'dashboard');
     }
 
-    function logoutApp() {
-      storageDel('absensi_token');
+    // Keluar: token dicabut di server, timer dihentikan, dan data siswa dikosongkan dari halaman
+    function logoutApp(opts) {
+      opts = opts || {};
+      const token = storageGet(TOKEN_KEY);
+      if (token && !opts.skipServer) {
+        // Pencabutan di server dikirim tanpa menunggu hasilnya (aman bila gagal: token tetap kedaluwarsa sendiri)
+        try {
+          fetch(getApiUrl(), {
+            method: 'POST', keepalive: true,
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({ action: 'logout', token: token, payload: {} })
+          }).catch(() => {});
+        } catch (e) { /* abaikan */ }
+      }
+      storageDel(TOKEN_KEY);
+      storageDel('absensi_idle');
+      stopSessionWatch();
       stopScanMode();
+      wipeAppData();
       document.getElementById('app-screen').style.display = 'none';
       document.getElementById('login-screen').style.display = 'flex';
       document.getElementById('login-password').value = '';
+      document.getElementById('login-error').classList.add('d-none');
+    }
+
+    // Kosongkan data yang masih tersimpan di halaman supaya tidak terlihat setelah logout
+    function wipeAppData() {
+      masterSiswaList = []; masterKelasList = []; currentRekapData = []; scanRecent = []; scanQueue = [];
+      jadwalData = { enabled: true, rows: [], libur: [] };
+      ['siswa-tbody', 'absensi-tbody', 'rekap-tbody', 'kelas-tbody', 'jadwal-tbody', 'libur-tbody', 'scan-recent-tbody'].forEach(id => {
+        const el = document.getElementById(id); if (el) el.innerHTML = '';
+      });
+      ['absensi-table-container', 'rekap-result-container'].forEach(id => {
+        const el = document.getElementById(id); if (el) el.classList.add('d-none');
+      });
     }
 
     function forceLogout(message) {
-      logoutApp();
+      logoutApp({ skipServer: true });
       const errBox = document.getElementById('login-error');
       errBox.textContent = message || 'Sesi berakhir, silakan login kembali.';
+      errBox.classList.remove('d-none');
+    }
+
+    // ==========================================
+    // 1b. SESI ADMIN: KELUAR OTOMATIS BILA TIDAK ADA AKTIVITAS
+    // ==========================================
+    let sesiTimer = null, sesiLastActivity = Date.now(), sesiLastPing = Date.now(), sesiWarnShown = false;
+    const SESI_ACTIVITY_EVENTS = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'wheel', 'scroll'];
+
+    function sesiIdleMs() {
+      const s = Number(storageGet('absensi_idle')) || DEFAULT_IDLE_SECONDS;
+      return Math.max(s, SESSION_WARN_SECONDS + 30) * 1000;
+    }
+
+    function markActivity() {
+      if (sesiWarnShown) return; // saat peringatan tampil, hanya tombol "Tetap Masuk" yang memperpanjang sesi
+      sesiLastActivity = Date.now();
+    }
+
+    function startSessionWatch() {
+      stopSessionWatch();
+      sesiLastActivity = Date.now();
+      sesiLastPing = Date.now();
+      sesiWarnShown = false;
+      SESI_ACTIVITY_EVENTS.forEach(evt => document.addEventListener(evt, markActivity, { capture: true, passive: true }));
+      sesiTimer = setInterval(sesiTick, 1000);
+      sesiTick();
+    }
+
+    function stopSessionWatch() {
+      SESI_ACTIVITY_EVENTS.forEach(evt => document.removeEventListener(evt, markActivity, { capture: true }));
+      clearInterval(sesiTimer);
+      sesiTimer = null;
+      hideSessionWarning();
+      const c = document.getElementById('sesi-countdown');
+      if (c) c.textContent = '--:--';
+    }
+
+    function fmtMmSs(sec) {
+      sec = Math.max(0, Math.floor(sec));
+      return String(Math.floor(sec / 60)).padStart(2, '0') + ':' + String(sec % 60).padStart(2, '0');
+    }
+
+    function sesiTick() {
+      const idleMs = sesiIdleMs();
+      const now = Date.now();
+      const remaining = idleMs - (now - sesiLastActivity);
+      const c = document.getElementById('sesi-countdown');
+      if (c) c.textContent = fmtMmSs(remaining / 1000);
+
+      if (remaining <= 0) { autoLogout(); return; }
+
+      if (remaining <= SESSION_WARN_SECONDS * 1000) {
+        showSessionWarning();
+        document.getElementById('sesi-sisa').textContent = Math.ceil(remaining / 1000);
+        return;
+      }
+
+      // Admin masih aktif: kabari server secara berkala agar sesi di server tidak kedaluwarsa lebih dulu
+      const pingEvery = Math.max(60000, Math.min(idleMs / 4, 300000));
+      if (sesiLastActivity > sesiLastPing && now - sesiLastPing >= pingEvery) {
+        sesiLastPing = now;
+        api('ping', {}, { silent: true });
+      }
+    }
+
+    function sessionModal() {
+      return bootstrap.Modal.getOrCreateInstance(document.getElementById('modalSesi'));
+    }
+    function showSessionWarning() {
+      if (sesiWarnShown) return;
+      sesiWarnShown = true;
+      sessionModal().show();
+    }
+    function hideSessionWarning() {
+      sesiWarnShown = false;
+      const el = document.getElementById('modalSesi');
+      if (el && el.classList.contains('show')) sessionModal().hide();
+    }
+
+    // Tombol "Tetap Masuk": perpanjang sesi (juga memperbarui sesi di server)
+    async function extendSession() {
+      hideSessionWarning();
+      sesiLastActivity = Date.now();
+      sesiLastPing = Date.now();
+      const res = await api('ping', {}, { silent: true });
+      if (res && !res.success && !res.unauthorized) alert(res.message || 'Gagal memperpanjang sesi.');
+    }
+
+    function autoLogout() {
+      hideSessionWarning();
+      logoutApp();
+      const errBox = document.getElementById('login-error');
+      errBox.textContent = 'Anda keluar otomatis karena tidak ada aktivitas. Silakan login kembali.';
       errBox.classList.remove('d-none');
     }
 
@@ -1003,6 +1123,12 @@
     function handleScanResponse(res, uid, remote) {
       currentScanRemote = !!remote;
       if (res && res.unauthorized) return;
+      // Layar umum tidak pernah menyimpan/menampilkan NIS maupun UID kartu, juga dari hasil scan jendela admin
+      if (DISPLAY_MODE && res) {
+        res = Object.assign({}, res);
+        if (res.siswa) res.siswa = { nama: res.siswa.nama, kelas: res.siswa.kelas };
+        delete res.uid;
+      }
 
       if (res.success && res.type === 'success') {
         const s = res.siswa;
@@ -1023,7 +1149,8 @@
         showScanResult('err', 'bi-slash-circle-fill', s ? s.nama : 'Absen tidak dibuka', s ? siswaLine(s) : '', res.message);
         beep('err');
       } else if (res.type === 'unknown') {
-        showScanResult('err', 'bi-x-circle-fill', 'Kartu tidak terdaftar', 'UID: ' + res.uid, 'Daftarkan kartu ini di menu Data Siswa');
+        if (DISPLAY_MODE) showScanResult('err', 'bi-x-circle-fill', 'Kartu tidak terdaftar', '', 'Silakan hubungi petugas');
+        else showScanResult('err', 'bi-x-circle-fill', 'Kartu tidak terdaftar', 'UID: ' + res.uid, 'Daftarkan kartu ini di menu Data Siswa');
         beep('err');
       } else {
         showScanResult('err', 'bi-x-circle-fill', 'Scan gagal', res.message || 'Terjadi kesalahan.', 'UID: ' + uid);
@@ -1070,7 +1197,7 @@
     // 4b. LAYAR TAMPILAN (MONITOR 2) & SINKRONISASI ANTAR JENDELA
     // ==========================================
     function siswaLine(s) {
-      return DISPLAY_MODE ? s.kelas : `${s.kelas} • NIS ${s.nis}`; // NIS tidak ditampilkan di layar umum
+      return (DISPLAY_MODE || !s.nis) ? s.kelas : `${s.kelas} • NIS ${s.nis}`; // NIS tidak ditampilkan di layar umum
     }
 
     const scanChannel = ('BroadcastChannel' in window) ? new BroadcastChannel('absensi-scan') : null;
@@ -1079,7 +1206,7 @@
         const m = ev.data || {};
         if (m.type === 'display-open') displayLastSeen = Date.now();
         else if (m.type === 'display-closed') displayLastSeen = 0;
-        else if (m.type === 'scan' && storageGet('absensi_token')) handleScanResponse(m.res, m.uid, true);
+        else if (m.type === 'scan' && storageGet(TOKEN_KEY)) handleScanResponse(m.res, m.uid, true);
       };
       if (DISPLAY_MODE) {
         const hello = () => scanChannel.postMessage({ type: 'display-open' });
@@ -1089,11 +1216,93 @@
       }
     }
 
+    // ---- Token Layar Absen ----
+    // Layar Absen memakai token sendiri (hanya boleh scan kartu, maksimal 14 jam). Token dibuat oleh admin
+    // dan diserahkan lewat postMessage ke jendela yang dibuka admin sendiri, tidak pernah lewat URL.
+    let displayWin = null;
+
     function openDisplayWindow() {
       const url = location.href.split('#')[0].split('?')[0] + '?layar=1';
+      // window.open harus dipanggil langsung dari klik agar tidak diblokir pop-up
       const w = window.open(url, 'layar-absen', 'popup=yes,width=1280,height=720');
-      if (!w) alert('Jendela diblokir browser. Izinkan pop-up untuk situs ini, lalu coba lagi.');
+      if (!w) { alert('Jendela diblokir browser. Izinkan pop-up untuk situs ini, lalu coba lagi.'); return; }
+      displayWin = w;
+      try { w.focus(); } catch (e) { /* abaikan */ }
     }
+
+    // Admin: jawab permintaan token dari Layar Absen yang dibuka oleh jendela ini
+    window.addEventListener('message', async ev => {
+      if (ev.origin !== location.origin) return;
+      const m = ev.data || {};
+      if (DISPLAY_MODE) {
+        if (m.type === 'display-token' && m.token && ev.source === window.opener) {
+          storageSet(TOKEN_KEY, m.token);
+          startDisplaySession();
+        }
+        return;
+      }
+      if (m.type === 'need-display-token' && ev.source && ev.source === displayWin) {
+        const res = await api('createDisplayToken', {}, { silent: true });
+        if (res && res.success && res.token) {
+          try { ev.source.postMessage({ type: 'display-token', token: res.token }, location.origin); } catch (e) { /* jendela sudah ditutup */ }
+        } else {
+          try { ev.source.postMessage({ type: 'display-denied', message: (res && res.message) || '' }, location.origin); } catch (e) { /* abaikan */ }
+        }
+      }
+    });
+
+    // Layar Absen: minta token ke jendela admin yang membukanya
+    function requestDisplayToken() {
+      if (window.opener && !window.opener.closed) {
+        try { window.opener.postMessage({ type: 'need-display-token' }, location.origin); return true; } catch (e) { /* abaikan */ }
+      }
+      return false;
+    }
+
+    function showDisplayWait(title, text) {
+      document.getElementById('dw-title').textContent = title;
+      document.getElementById('dw-text').innerHTML = text;
+      document.getElementById('display-wait').classList.remove('d-none');
+    }
+    function hideDisplayWait() { document.getElementById('display-wait').classList.add('d-none'); }
+
+    function initDisplaySession() {
+      if (storageGet(TOKEN_KEY)) { startDisplaySession(); return; }
+      showDisplayWait('Menyambungkan layar...', 'Menunggu persetujuan dari jendela admin.');
+      if (!requestDisplayToken()) {
+        showDisplayWait('Layar belum diaktifkan', 'Buka halaman ini dari menu admin: <b>Layar Absen</b>.');
+      }
+    }
+
+    function startDisplaySession() {
+      displayRenewing = false;
+      hideDisplayWait();
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('app-screen').style.display = 'block';
+      switchMenu('scan');
+    }
+
+    // Token layar habis/ditolak: coba minta token baru ke admin; bila tidak bisa, tampilkan petunjuk (bukan form login)
+    let displayRenewing = false;
+    function displaySessionEnded() {
+      if (displayRenewing) return;
+      storageDel(TOKEN_KEY);
+      stopScanMode();
+      showDisplayWait('Sesi layar berakhir', 'Buka kembali dari menu admin: <b>Layar Absen</b>.');
+      displayRenewing = true;
+      if (requestDisplayToken()) {
+        // bila admin masih login, token baru tiba lewat postMessage dalam beberapa detik
+        setTimeout(() => { displayRenewing = false; }, 8000);
+      } else {
+        displayRenewing = false;
+      }
+    }
+    window.addEventListener('message', ev => {
+      if (DISPLAY_MODE && ev.origin === location.origin && ev.source === window.opener && (ev.data || {}).type === 'display-denied') {
+        showDisplayWait('Sesi layar berakhir', 'Buka kembali dari menu admin: <b>Layar Absen</b>.');
+        displayRenewing = false;
+      }
+    });
 
     function toggleFullscreen() {
       if (!document.fullscreenElement) {
